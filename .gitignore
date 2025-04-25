@@ -1,5 +1,4 @@
 /venv
-/launch/*
 /local
 /rosbag*
 devcontainer.json

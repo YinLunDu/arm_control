@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# 1. 統一管理 -v 參數
+VOLUME_ARGS="-v $(pwd)/src:/workspaces/src -v $(pwd)/launch:/workspaces/launch"
+
 # Port mapping check
 PORT_MAPPING=""
 if [ "$1" = "--port" ] && [ -n "$2" ] && [ -n "$3" ]; then
@@ -77,8 +80,7 @@ elif [ "$ARCH" = "x86_64" ] || ([ "$ARCH" = "arm64" ] && [ "$OS" = "Darwin" ]); 
             $PORT_MAPPING \
             $device_options \
             --env-file .env \
-            -v "$(pwd)/src:/workspaces/src" \
-            -v "$(pwd)/screenshots:/workspaces/screenshots" \
+            $VOLUME_ARGS \
             ghcr.io/screamlab/pros_car_docker_image:latest \
             /bin/bash
     else
@@ -89,8 +91,7 @@ elif [ "$ARCH" = "x86_64" ] || ([ "$ARCH" = "arm64" ] && [ "$OS" = "Darwin" ]); 
             $GPU_FLAGS \
             $device_options \
             --env-file .env \
-            -v "$(pwd)/src:/workspaces/src" \
-            -v "$(pwd)/screenshots:/workspaces/screenshots" \
+            $VOLUME_ARGS \
             ghcr.io/screamlab/pros_car_docker_image:latest \
             /bin/bash
 
@@ -102,8 +103,7 @@ elif [ "$ARCH" = "x86_64" ] || ([ "$ARCH" = "arm64" ] && [ "$OS" = "Darwin" ]); 
                 $PORT_MAPPING \
                 --env-file .env \
                 $device_options \
-                -v "$(pwd)/src:/workspaces/src" \
-                -v "$(pwd)/screenshots:/workspaces/screenshots" \
+                $VOLUME_ARGS \
                 ghcr.io/screamlab/pros_car_docker_image:latest \
                 /bin/bash
         fi
