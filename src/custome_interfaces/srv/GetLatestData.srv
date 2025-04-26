@@ -1,3 +1,0 @@
-string key  # The name of the data key to fetch
----
-string data  # The latest data value corresponding to the key

@@ -1,5 +1,0 @@
-bool processed
----
-bool success
-string message
-std_msgs/Float32MultiArray data
