@@ -11,7 +11,7 @@ class ArmController:
         """
         self.ros_communicator = ros_communicator
         self.current_angles = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -10.0, 10.0]
-        self.angle_increment = 0.1
+        self.angle_increment = 10.0  # 每次增加10度
         # 預設動作
         self.predefined_actions = {
             "catch": self._catch_action,
@@ -22,11 +22,11 @@ class ArmController:
         try:
             if 0 <= joint_index < len(self.current_angles)-2:
                 self.current_angles[joint_index] += direction * self.angle_increment
-                # 限制角度範圍在 -π 到 π 之間
-                self.current_angles[joint_index] = max(min(self.current_angles[joint_index], np.pi), -np.pi)
+                # 限制角度範圍在 -360 到 360 度之間
+                self.current_angles[joint_index] = max(min(self.current_angles[joint_index], 360.0), -360.0)
                 # 發布新的角度
                 self.publish_angles()
-                return f"關節 {joint_index} 移動到 {self.current_angles[joint_index]:.2f} 弧度 \n {self.current_angles}"
+                return f"關節 {joint_index} 移動到 {self.current_angles[joint_index]:.2f} 度 \n {self.current_angles}"
             return f"無效的關節索引: {joint_index}"
         except Exception as e:
             return f"移動關節時發生錯誤: {str(e)}"
@@ -70,6 +70,6 @@ class ArmController:
         """獲取當前機械手臂狀態"""
         state_info = "機械手臂當前角度:\n"
         for i, angle in enumerate(self.current_angles):
-            state_info += f"關節 {i}: {angle:.2f} 弧度\n"
+            state_info += f"關節 {i}: {angle:.2f} 度\n"
         return state_info
 
