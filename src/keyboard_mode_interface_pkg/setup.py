@@ -20,6 +20,7 @@ setup(
     entry_points={
         "console_scripts": [
             "keyboard_control_node = keyboard_mode_interface_pkg.main:main",
+            "robot_arm_monitor_node = keyboard_mode_interface_pkg.robot_arm_monitor:main",
         ],
     },
 )
