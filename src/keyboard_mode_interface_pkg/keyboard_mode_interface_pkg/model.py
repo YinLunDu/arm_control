@@ -23,5 +23,5 @@ class StringEnum(str, Enum):
 
 
 class DeviceDataTypeEnum(StringEnum):
-
+    realrobot = auto()
     robot_arm = auto()

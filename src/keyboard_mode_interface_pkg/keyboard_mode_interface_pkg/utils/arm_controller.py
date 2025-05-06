@@ -36,8 +36,7 @@ class ArmController:
     def ensure_joint_pos_initialized(self):
         if len(self.joint_pos) < self.num_joints:
             self.joint_pos = [0.0] * self.num_joints
-          #  初始化關節位置，所有關節角度設置為 0.0
-            self.reset_arm(all_angle_degrees=90.0)
+            self.reset_arm()
             self.update_action(self.joint_pos)
 
     def manual_control(self, index, key):
@@ -79,7 +78,7 @@ class ArmController:
                     max_angle=max_angle,
                 )
             elif key == "b":  # 重置手臂
-                self.reset_arm(all_angle_degrees=90.0)
+                self.reset_arm()
             elif key == "q":  # 結束控制
                 return True
             else:
@@ -109,6 +108,8 @@ class ArmController:
                 self._auto_arm_thread.join()
                 self._thread_running = False
             return True
+        elif key == "b":  # 重置手臂
+            self.reset_arm()
         if not self._thread_running:
             self._stop_event.clear()  # 清除之前的停止狀態
             self._auto_arm_thread = threading.Thread(
@@ -556,7 +557,7 @@ class ArmController:
     def project_yolo_to_world_fixed_depth(self, offset_distance=0.1):
         """
         將 YOLO 偵測到的物體坐標投射到 PyBullet 世界座標系中的末端執行器前方，
-        深度（x 軸）與末端執行器保持一致，y 和 z 偏移量根據 YOLO 偵測的座標進行調整。
+        深度（x 軸）與末端夾具保持一致，y 和 z 偏移量根據 YOLO 偵測的座標進行調整。
 
         Args:
             offset_distance (float): 偏移距離，用於將坐標投射到末端執行器的前方（單位：米）
@@ -689,7 +690,7 @@ class ArmController:
         angle_radians = math.radians(angle_degrees)
         self.joint_pos = [angle_radians] * self.num_joints
 
-    def reset_arm(self, all_angle_degrees=90.0):
+    def reset_arm(self):
         """
         Resets the robotic arm to the default position (all angles set to 0).
 
@@ -710,6 +711,20 @@ class ArmController:
             {"joint_id": 6, "angle": 0.01, },
             {"joint_id": 7, "angle": -0.01, },
         ]
+        init_position=self.data_processor.get_realrobot_position()
+        if(init_position != None):
+            init_position.extend([0.01])
+            init_position.extend([-0.01])
+            joint_configs = [
+                {"joint_id": 0, "angle": init_position[0], },
+                {"joint_id": 1, "angle": init_position[1], },
+                {"joint_id": 2, "angle": init_position[2], },
+                {"joint_id": 3, "angle": init_position[3], },
+                {"joint_id": 4, "angle": init_position[4], },
+                {"joint_id": 5, "angle": init_position[5], },
+                {"joint_id": 6, "angle": init_position[6], },
+                {"joint_id": 7, "angle": init_position[7], },
+            ]
         self.set_multiple_joint_positions(joint_configs)
 
     def set_last_joint_angle(self, target_angle, min_angle=-360.0, max_angle=360.0):
@@ -791,3 +806,4 @@ class ArmController:
             return f"{self.joint_pos} \n 假爪已關閉"
         else:
             return f"{self.joint_pos} \n假爪已打開"
+

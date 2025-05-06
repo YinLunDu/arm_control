@@ -6,6 +6,13 @@ class DataProcessor:
     def __init__(self, ros_communicator):
         self.ros_communicator = ros_communicator
 
+    def get_realrobot_position(self):
+        if(self.ros_communicator.get_realrobot_position() is not None):
+            position_msg = self.ros_communicator.get_realrobot_position
+            position = position_msg.data
+            return position
+        else:
+            return None
     def get_processed_amcl_pose(self):
         amcl_pose_msg = self.ros_communicator.get_latest_amcl_pose()
         position = amcl_pose_msg.pose.pose.position

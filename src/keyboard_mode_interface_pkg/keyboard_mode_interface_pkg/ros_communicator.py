@@ -1,34 +1,42 @@
 from rclpy.node import Node
-from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped, Point, PointStamped
-from std_msgs.msg import String, Header,Float32MultiArray
+from keyboard_mode_interface_pkg.model import DeviceDataTypeEnum
+from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped, Point
+from std_msgs.msg import String, Header, Bool, Float32MultiArray
 from nav_msgs.msg import Path
 from sensor_msgs.msg import Imu
 from trajectory_msgs.msg import JointTrajectoryPoint
-from .model import DeviceDataTypeEnum
-from nav2_msgs.srv import ClearEntireCostmap
+from geometry_msgs.msg import PointStamped
 from visualization_msgs.msg import Marker
+from rclpy.action import ActionClient
+import rclpy
 import math
+
+
 class RosCommunicator(Node):
     def __init__(self):
         super().__init__("RosCommunicator")
-        self.publisher_joint_trajectory = self.create_publisher(
-            JointTrajectoryPoint, DeviceDataTypeEnum.robot_arm, 10
+        self.realrobot_position = None
+        self.subscriber_realrobot_position=self.create_subscription(
+            Float32MultiArray, DeviceDataTypeEnum.realrobot, self.subscriber_realrobot_position_callback, 10
         )
-        self.latest_amcl_pose = None  # 存儲最新的AMCL位姿數據
-        self.subscriber_amcl = self.create_subscription(#改成實際機械手臂位姿
-            PoseWithCovarianceStamped,  # 消息類型：帶協方差的位姿
-            "/amcl_pose",  # 話題名稱
-            self.subscriber_amcl_callback,  # 回調函數
-            10  # 隊列大小
+        # subscribeamcl_pose
+        self.latest_amcl_pose = None
+        self.subscriber_amcl = self.create_subscription(
+            PoseWithCovarianceStamped, "/amcl_pose", self.subscriber_amcl_callback, 10
         )
+        
+        # subscribe goal_pose
         self.target_pose = None
         self.subscriber_goal = self.create_subscription(
             PoseStamped, "/goal_pose", self.subscriber_goal_callback, 1
         )
+
         self.latest_received_global_plan = None
         self.subscriber_received_global_plan = self.create_subscription(
             Path, "/received_global_plan", self.received_global_plan_callback, 1
         )
+
+        # Subscribe to YOLO detected object coordinates
         self.latest_yolo_coordinates = None
         self.subscriber_yolo_detection_position = self.create_subscription(
             PointStamped,
@@ -36,6 +44,7 @@ class RosCommunicator(Node):
             self.yolo_detection_position_callback,
             10,
         )
+
         # Subscribe to YOLO detected object coordinates
         self.latest_yolo_offset = None
         self.subscriber_yolo_offset = self.create_subscription(
@@ -44,6 +53,12 @@ class RosCommunicator(Node):
             self.yolo_detection_offset_callback,
             10,
         )
+
+        self.latest_yolo_detection_status = None
+        self.subscriber_yolo_detection_status = self.create_subscription(
+            Bool, "/yolo/detection/status", self.yolo_detection_status_callback, 10
+        )
+
         self.latest_imu_data = None
         self.imu_sub = self.create_subscription(
             Imu, "/imu/data", self.imu_data_callback, 10
@@ -90,23 +105,14 @@ class RosCommunicator(Node):
         self.publisher_target_marker = self.create_publisher(
             Marker, "/selected_target_marker", 10
         )
-        self.clear_global_costmap_client = self.create_client(
-            ClearEntireCostmap, "/global_costmap/clear"
-        )
-        self.clear_local_costmap_client = self.create_client(
-            ClearEntireCostmap, "/local_costmap/clear"
-        )
 
-        self.publisher_received_global_plan = self.create_publisher(
-            Path, "/received_global_plan", 10
-        )
-        self.publisher_plan = self.create_publisher(Path, "/plan", 10)
-    # publish robot arm angle
-
-
+    def yolo_detection_status_callback(self, msg):
+        self.latest_yolo_detection_status = msg
+    def imu_data_callback(self, msg):
+        self.latest_imu_data = msg
     def clear_received_global_plan(self):
         """
-        清空 /received_global_plan 话题
+        清空 /received_global_plan 话題
         """
         empty_path = Path()
         empty_path.header.frame_id = "map"
@@ -115,7 +121,7 @@ class RosCommunicator(Node):
 
     def clear_plan(self):
         """
-        清空 /plan 话题
+        清空 /plan 话題
         """
         empty_path = Path()
         empty_path.header.frame_id = "map"
@@ -129,8 +135,16 @@ class RosCommunicator(Node):
         if self.latest_amcl_pose is None:
             self.get_logger().warn("No AMCL pose data received yet.")
         return self.latest_amcl_pose
-
+    def subscriber_realrobot_position_callback(self, msg):
+        print(f"Received real robot position: {msg.data}")
+        self.get_logger().info(f"Received real robot position: {msg.data}")
+        self.realrobot_position = msg.data
+    def get_realrobot_position(self):
+        if self.realrobot_position is None:
+            self.get_logger().warn("No initial position data received yet.")
+        return self.realrobot_position
     # goal callback and get_latest_goal
+
     def subscriber_goal_callback(self, msg):
         position = msg.pose.position
         target = [position.x, position.y, position.z]
@@ -139,7 +153,7 @@ class RosCommunicator(Node):
     def get_latest_goal(self):
         if self.target_pose is None:
             self.get_logger().warn("No goal pose data received yet.")
-        return self.target_pose    
+        return self.target_pose
     def received_global_plan_callback(self, msg):
         self.latest_received_global_plan = msg
 
@@ -191,13 +205,7 @@ class RosCommunicator(Node):
         if self.latest_camera_x_multi_depth is None:
             return None
         return self.latest_camera_x_multi_depth
-    def imu_data_callback(self, msg):
-        self.latest_imu_data = msg
 
-    def get_latest_imu_data(self):
-        if self.latest_imu_data is None:
-            return None
-        return self.latest_imu_data
     # YOLO coordinates callback
     def yolo_detection_position_callback(self, msg):
         """Callback to receive YOLO detected object coordinates."""
@@ -221,6 +229,8 @@ class RosCommunicator(Node):
         target_label_msg = String()
         target_label_msg.data = label
         self.publisher_target_label.publish(target_label_msg)
+
+
     def publish_confirmed_initial_plan(self, path_msg: Path):
         """
         確認路徑使用
@@ -253,6 +263,3 @@ class RosCommunicator(Node):
         joint_trajectory_point.positions = [math.degrees(a) for a in angle]
         joint_trajectory_point.velocities = [0.0] * len(angle)
         self.publisher_joint_trajectory.publish(joint_trajectory_point)
-
-
-
