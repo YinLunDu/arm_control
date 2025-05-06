@@ -80,14 +80,14 @@ class PybulletRobotController:
         self.num_joints = p.getNumJoints(self.robot_id)  # Joints
         print("#Joints:", self.num_joints)
         if self.controllable_joints is None:
-            self.controllable_joints = list(range( self.num_joints-2))
+            self.controllable_joints = list(range( self.num_joints))
         print("#Controllable Joints:", self.controllable_joints)
         if self.end_eff_index is None:
             self.end_eff_index = self.controllable_joints[-3]
         print("#End-effector:", self.end_eff_index)
         self.num_joints = p.getNumJoints(self.robot_id)
         print(f"總關節數量: {self.num_joints}")
-        self.controllable_joints = list(range( self.num_joints - 2))
+        self.controllable_joints = list(range( self.num_joints))
         print(f"可控制的關節索引: {self.controllable_joints}")
         print(f"需要提供的初始位置數量: {len(self.controllable_joints)}")
 
@@ -764,3 +764,49 @@ class PybulletRobotController:
             p.stepSimulation()
             time.sleep(self.time_step)
         p.disconnect()
+    def generate_random_target_and_solve_ik(self, x_range=(-0.5, 0.5), y_range=(-0.5, 0.5), z_range=(0.2, 0.8), steps=30):
+        """
+        Generates a random target point, marks it, calculates the IK solution,
+        and generates a smooth angle sequence to reach it.
+
+        Args:
+            x_range (tuple): Min/max range for x coordinate.
+            y_range (tuple): Min/max range for y coordinate.
+            z_range (tuple): Min/max range for z coordinate.
+            steps (int): Number of steps for smooth transition.
+
+        Returns:
+            list or None: A sequence of joint angles for the transition if successful, otherwise None.
+        """
+        # Generate random target position
+        target_x = random.uniform(x_range[0], x_range[1])
+        target_y = random.uniform(y_range[0], y_range[1])
+        target_z = random.uniform(z_range[0], z_range[1])
+        target_position = [target_x, target_y, target_z]
+
+        print(f"Generated random target: {target_position}")
+
+        # Mark the target position
+        self.markTarget(target_position)
+
+        # Calculate IK solution for the target position
+        target_joint_angles = self.solveInversePositionKinematics(target_position)
+
+        if target_joint_angles and len(target_joint_angles) >= len(self.controllable_joints):
+            target_joint_angles = np.array(target_joint_angles[:len(self.controllable_joints)])
+            print(f"IK solution found: {target_joint_angles.tolist()}")
+
+            # Get current joint positions
+            current_positions = np.array(self.getJointStates()[0])
+
+            angle_sequence = []
+            # Generate smooth transition sequence
+            for step in range(steps):
+                t = (step + 1) / steps # Start from t > 0 to move towards target
+                intermediate_positions = (1 - t) * current_positions + t * target_joint_angles
+                angle_sequence.append(intermediate_positions.tolist())
+
+            return angle_sequence
+        else:
+            print("Could not find a valid IK solution for the random target.")
+            return None

@@ -7,7 +7,7 @@ from trajectory_msgs.msg import JointTrajectoryPoint
 from .model import DeviceDataTypeEnum
 from nav2_msgs.srv import ClearEntireCostmap
 from visualization_msgs.msg import Marker
-
+import math
 class RosCommunicator(Node):
     def __init__(self):
         super().__init__("RosCommunicator")
@@ -250,7 +250,7 @@ class RosCommunicator(Node):
         self.publisher_target_marker.publish(marker)
     def publish_robot_arm_angle(self, angle):
         joint_trajectory_point = JointTrajectoryPoint()
-        joint_trajectory_point.positions = angle
+        joint_trajectory_point.positions = [math.degrees(a) for a in angle]
         joint_trajectory_point.velocities = [0.0] * len(angle)
         self.publisher_joint_trajectory.publish(joint_trajectory_point)
 
