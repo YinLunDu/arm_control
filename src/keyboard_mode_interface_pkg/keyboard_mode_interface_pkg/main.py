@@ -23,9 +23,9 @@ def init_ros_node():
 def main():
     ros_communicator, ros_thread = init_ros_node()#這行程式碼的作用是呼叫 init_ros_node() 函式，並將它回傳的兩個值分別指定給變數 ros_communicator 和 ros_thread
     data_processor = DataProcessor(ros_communicator)
-    ik_solver = PybulletRobotController(end_eff_index=6)
+    ik_solver = PybulletRobotController(end_eff_index=8)
     arm_controller = ArmController(
-        ros_communicator, data_processor, ik_solver, num_joints=8
+        ros_communicator, data_processor, ik_solver, num_joints=9
     )
     app = ModeApp(arm_controller)
 

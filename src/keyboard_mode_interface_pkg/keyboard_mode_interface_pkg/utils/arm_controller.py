@@ -9,7 +9,7 @@ import threading
 
 
 class ArmController:
-    def __init__(self, ros_communicator, data_processor, ik_solver, num_joints=4):
+    def __init__(self, ros_communicator, data_processor, ik_solver,num_joints):
         # initail pybullet
         self.ik_solver = ik_solver
         self.ik_solver.createWorld(GUI=True)
@@ -623,8 +623,11 @@ class ArmController:
     # 更新實體和虛擬
     def update_action(self, joint_pos):
         print(f"update_action: {self.get_joint_angles()}")
-        self.ik_solver.setJointPosition(joint_pos)
+       # self.ik_solver.setJointPosition(joint_pos)
         self.ros_communicator.publish_robot_arm_angle(joint_pos)
+      #  joint_pos.append(0)
+        self.ik_solver.setJointPosition(joint_pos)
+        self.ik_solver.markEndEffector()
 
     def clamp(self, value, min_value, max_value):
         """

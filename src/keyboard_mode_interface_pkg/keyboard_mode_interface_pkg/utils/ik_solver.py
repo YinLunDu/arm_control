@@ -43,11 +43,11 @@ class PybulletRobotController:
         self.time_step = time_step
         self.previous_ee_position = None
         self.initial_height = initial_height  # 新增的高度參數
-
+        
         # 讀取並初始化關節限制
         self.joint_limits = self.get_joint_limits_from_urdf()
         self.num_joints = len(self.joint_limits)  # 使用關節數量設定
-
+        
     # function to initiate pybullet and engine and create world
     def createWorld(self, GUI=True, view_world=False):
         # load pybullet physics engine
@@ -83,14 +83,14 @@ class PybulletRobotController:
             self.controllable_joints = list(range( self.num_joints))
         print("#Controllable Joints:", self.controllable_joints)
         if self.end_eff_index is None:
-            self.end_eff_index = self.controllable_joints[-3]
+            self.end_eff_index = self.controllable_joints[-1]
         print("#End-effector:", self.end_eff_index)
         self.num_joints = p.getNumJoints(self.robot_id)
         print(f"總關節數量: {self.num_joints}")
         self.controllable_joints = list(range( self.num_joints))
         print(f"可控制的關節索引: {self.controllable_joints}")
         print(f"需要提供的初始位置數量: {len(self.controllable_joints)}")
-
+        self.markEndEffector()
         if view_world:
             while True:
                 p.stepSimulation()
@@ -350,11 +350,14 @@ class PybulletRobotController:
         # 獲取末端執行器的位置
         eeState = p.getLinkState(self.robot_id, self.end_eff_index)
         ee_position = eeState[0]  # 末端執行器的位置
-
+        print("End-effector position:", ee_position)
         # 使用藍色點標記末端執行器位置
         p.addUserDebugPoints(
-            position=ee_position, color=[0, 0, 1], size=0.05  # 藍色  # 點的大小
+            pointPositions=[list(ee_position)], 
+            pointColorsRGB=[[0, 0, 1]],  # 把顏色改成列表的列表
+            pointSize=10
         )
+
 
     def markEndEffectorPath(self):
         # 獲取當前末端執行器的位置
