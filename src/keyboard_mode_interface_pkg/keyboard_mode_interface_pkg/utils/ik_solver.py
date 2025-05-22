@@ -28,12 +28,13 @@ class PybulletRobotController:
     def __init__(
         self,
         
-        initial_height=0.195,
+        initial_height=0.69,
+
         controllable_joints=None,
         end_eff_index=None,
         time_step=1e-3,
     ):
-        
+        initial_height=0
         robot_description_path = get_package_share_directory("robot_description")
         self.urdf_path = os.path.join(robot_description_path, "urdf", "target.urdf")
         self.robot_id = None
@@ -65,7 +66,7 @@ class PybulletRobotController:
         )
         p.setRealTimeSimulation(True)
         p.loadURDF("plane.urdf")
-        rotation = R.from_euler("z", 90, degrees=True).as_quat()
+        rotation = R.from_euler("z", -270, degrees=True).as_quat()
 
         # loading robot into the environment
         
@@ -767,7 +768,7 @@ class PybulletRobotController:
             p.stepSimulation()
             time.sleep(self.time_step)
         p.disconnect()
-    def generate_random_target_and_solve_ik(self, x_range=(-0.5, 0.5), y_range=(-0.5, 0.5), z_range=(0.2, 0.8), steps=30):
+    def generate_random_target_and_solve_ik(self, x_range=(-0.15, -0.25), y_range=(-0.15,-0.25), z_range=(0.4, 0.6 ), steps=30):
         """
         Generates a random target point, marks it, calculates the IK solution,
         and generates a smooth angle sequence to reach it.
@@ -784,9 +785,13 @@ class PybulletRobotController:
         # Generate random target position
         target_x = random.uniform(x_range[0], x_range[1])
         target_y = random.uniform(y_range[0], y_range[1])
-        target_z = random.uniform(z_range[0], z_range[1])
-        target_position = [target_x, target_y, target_z]
+        target_z = random.uniform(z_range[0], z_range[1])+self.initial_height
 
+        target_position = [target_x, target_y, target_z]
+        roll = 0
+        pitch = -math.pi /2
+        yaw = 0
+        target_position += [roll, pitch, yaw]
         print(f"Generated random target: {target_position}")
 
         # Mark the target position

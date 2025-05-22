@@ -7,7 +7,6 @@ from scipy.spatial.transform import Rotation as R
 import numpy as np
 import threading
 
-
 class ArmController:
     def __init__(self, ros_communicator, data_processor, ik_solver,num_joints):
         # initail pybullet
@@ -33,11 +32,16 @@ class ArmController:
         self.predefined_actions = {
             "catch": self._catch_action,
         }
+ 
+    #    print(self.data_processor.get_realrobot_position())
     def ensure_joint_pos_initialized(self):
+
         if len(self.joint_pos) < self.num_joints:
             self.joint_pos = [0.0] * self.num_joints
             self.reset_arm()
             self.update_action(self.joint_pos)
+        
+
 
     def manual_control(self, index, key):
         # 定義每個軸的最小和最大角度
@@ -79,6 +83,8 @@ class ArmController:
                 )
             elif key == "b":  # 重置手臂
                 self.reset_arm()
+            elif key=="t":
+                self.real_robot_position()
             elif key == "q":  # 結束控制
                 return True
             else:
@@ -110,21 +116,39 @@ class ArmController:
             return True
         elif key == "b":  # 重置手臂
             self.reset_arm()
-        if not self._thread_running:
-            self._stop_event.clear()  # 清除之前的停止狀態
-            self._auto_arm_thread = threading.Thread(
-                target=self.background_task,
-                args=(self._stop_event, mode),
-                daemon=True,
-            )
-            self._auto_arm_thread.start()
-            self._thread_running = True
-        return False
+        elif key == "t":
+            # 判斷 realposition 和目前目標 joint 前6個最大誤差是否在 1 度以內
+            whether_next_pos=True
+            real_robot_position = self.data_processor.get_realrobot_position()
+            if real_robot_position is not None and len(real_robot_position) >= 6:
+                # 取目前 joint_pos 前6個（排除夾爪等多餘項）
+                current_joint_pos = self.joint_pos[:6]
+                # 計算每個關節的角度誤差（以度為單位）
+                errors = [abs(math.degrees(a) - math.degrees(b)) for a, b in zip(current_joint_pos, real_robot_position[:6])]
+                max_error = max(errors)
+                print(f"最大誤差: {max_error:.2f} 度")
+                if max_error <= 1.0:
+                    whether_next_pos=True
+                else:
+                    print("實體與目標 joint 前6個最大誤差超過 1 度")
+            else:
+                print("無法獲取實體機械手臂位置或數量不符")
+            if not self._thread_running and whether_next_pos:
+                self._stop_event.clear()  # 清除之前的停止狀態
+                self._auto_arm_thread = threading.Thread(
+                    target=self.background_task,
+                    args=(self._stop_event, mode),
+                    daemon=True,
+                )
+                self._auto_arm_thread.start()
+                self._thread_running = True
+            return False
 
     def background_task(self, stop_event, mode):
         while not stop_event.is_set():
             if mode == "auto_arm_human":
                 self.random_wave()
+                self._thread_running = False
 
     def get_mediapipe_data_coordinates(self):
         mediapipe_coords = self.data_processor.get_processed_mediapipe_data()
@@ -248,7 +272,7 @@ class ArmController:
             time.sleep(0.5)
         self.action_in_progress = False
 
-    def random_wave(self, num_moves=5, steps=30):
+    def random_wave(self, num_moves=5, steps=180):
         joint_angle_sequences = self.ik_solver.generate_random_target_and_solve_ik()
         for joint_angles in joint_angle_sequences:
             self.ik_solver.setJointPosition(joint_angles)
@@ -622,12 +646,17 @@ class ArmController:
 
     # 更新實體和虛擬
     def update_action(self, joint_pos):
-        print(f"update_action: {self.get_joint_angles()}")
+     #   print(f"update_action: {self.get_joint_angles()}")
        # self.ik_solver.setJointPosition(joint_pos)
+        numbers =joint_pos[:8]
+        
         self.ros_communicator.publish_robot_arm_angle(joint_pos)
       #  joint_pos.append(0)
+        if len(joint_pos) < 9:
+
+            joint_pos.append(0)
         self.ik_solver.setJointPosition(joint_pos)
-        self.ik_solver.markEndEffector()
+     #   self.ik_solver.markEndEffector()
 
     def clamp(self, value, min_value, max_value):
         """
@@ -775,6 +804,8 @@ class ArmController:
             return
 
         # 獲取當前角度（轉換為度數）
+        print(f"joint_id: {joint_id}")
+        print(f"joint_pos: {len(self.joint_pos)}")
         current_angle = math.degrees(self.joint_pos[joint_id])
 
         # 計算新角度
@@ -809,4 +840,19 @@ class ArmController:
             return f"{self.joint_pos} \n 假爪已關閉"
         else:
             return f"{self.joint_pos} \n假爪已打開"
+    def real_robot_position(self):
+        """
+        獲取實體機械手臂的當前位置
+        """
+        # 獲取實體機械手臂的當前位置
+        real_robot_position = self.data_processor.get_realrobot_position()
+        print(f"real_robot_position: {real_robot_position}")
+        if real_robot_position is not None:
+            crawl=self.joint_pos[6]
+            self.joint_pos = real_robot_position
+            self.joint_pos.append(crawl)
+            self.joint_pos.append(-crawl)
+            return f"實體機械手臂當前位置: {self.joint_pos}"
+        else:
+            return None
 

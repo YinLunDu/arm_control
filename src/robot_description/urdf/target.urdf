@@ -494,11 +494,12 @@
     <child link="joint251_1"/>
     <axis xyz="0.0 0.0 1.0"/>
   </joint>
-  <joint name="Revolute 3" type="continuous">
+  <joint name="Revolute 3" type="revolute">
     <origin xyz="0.071 0.0 0.076501" rpy="0 0 0"/>
     <parent link="joint251_1"/>
     <child link="joint251_2"/>
     <axis xyz="1.0 0.0 0.0"/>
+    <limit lower="-0.5236" upper="0.5236" />
   </joint>
   <joint name="Rigid 4" type="fixed">
     <origin xyz="0.076501 -0.0 0.071" rpy="0 0 0"/>

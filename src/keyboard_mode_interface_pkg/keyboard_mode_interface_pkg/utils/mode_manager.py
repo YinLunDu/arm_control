@@ -26,8 +26,6 @@ class AutoArmMode(BaseMode):
     def handle_submode_select(self, submode):
         def on_key(key):
             self.app.arm_controller.auto_control(mode=submode, key=key)
-            if key == "q":
-                self.app.arm_controller.auto_control(mode=submode, key=key)
 
         self.show_submode_screen(
             message=f"AutoArm Mode: Submode {submode}\nPress 'q' to go back.",

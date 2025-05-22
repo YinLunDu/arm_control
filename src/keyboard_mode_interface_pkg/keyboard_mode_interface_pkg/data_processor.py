@@ -8,9 +8,9 @@ class DataProcessor:
 
     def get_realrobot_position(self):
         if(self.ros_communicator.get_realrobot_position() is not None):
-            position_msg = self.ros_communicator.get_realrobot_position
-            position = position_msg.data
-            return position
+            position = self.ros_communicator.get_realrobot_position()
+            position_in_radians = [math.radians(p) for p in position]
+            return position_in_radians
         else:
             return None
     def get_processed_amcl_pose(self):

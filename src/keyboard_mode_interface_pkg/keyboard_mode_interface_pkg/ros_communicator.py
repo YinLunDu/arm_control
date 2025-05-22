@@ -262,4 +262,5 @@ class RosCommunicator(Node):
         joint_trajectory_point = JointTrajectoryPoint()
         joint_trajectory_point.positions = [math.degrees(a) for a in angle]
         joint_trajectory_point.velocities = [0.0] * len(angle)
+        print(f"Publishing robot arm angle: {joint_trajectory_point.positions}")
         self.publisher_joint_trajectory.publish(joint_trajectory_point)
