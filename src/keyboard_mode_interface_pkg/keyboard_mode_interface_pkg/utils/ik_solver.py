@@ -66,7 +66,7 @@ class PybulletRobotController:
         )
         p.setRealTimeSimulation(True)
         p.loadURDF("plane.urdf")
-        rotation = R.from_euler("z", -270, degrees=True).as_quat()
+        rotation = R.from_euler("z", 0, degrees=True).as_quat()
 
         # loading robot into the environment
         
@@ -788,8 +788,8 @@ class PybulletRobotController:
         target_z = random.uniform(z_range[0], z_range[1])+self.initial_height
 
         target_position = [target_x, target_y, target_z]
-        roll = 0
-        pitch = -math.pi /2
+        roll = math.pi /2
+        pitch = 0
         yaw = 0
         target_position += [roll, pitch, yaw]
         print(f"Generated random target: {target_position}")
