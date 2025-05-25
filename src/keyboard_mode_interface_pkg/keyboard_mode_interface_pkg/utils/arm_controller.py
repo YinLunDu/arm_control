@@ -8,40 +8,36 @@ import numpy as np
 import threading
 
 class ArmController:
-    def __init__(self, ros_communicator, data_processor, ik_solver,num_joints):
-        # initail pybullet
+    def __init__(self, ros_communicator, data_processor, ik_solver, num_joints):
+        # 初始化模擬環境與參數
         self.ik_solver = ik_solver
         self.ik_solver.createWorld(GUI=True)
-
         self.ros_communicator = ros_communicator
         self.data_processor = data_processor
 
-        self.num_joints = num_joints  # 機械手臂角度
-        self.joint_pos = []  # 紀錄目前關節角度用
+        self.num_joints = num_joints
+        self.joint_pos = []
         self.key = 0
 
         self.world_created = False
         self.is_moving = False
-        self.action_in_progress = False  # 動作進行中的標誌
+        self.action_in_progress = False
         self.latest_align_coordinates = None
-
         self.base_link_position = self.ik_solver.get_base_position()
+
         self.flag = 0
         self._thread_running = False
         self._stop_event = threading.Event()
+
         self.predefined_actions = {
             "catch": self._catch_action,
         }
  
-    #    print(self.data_processor.get_realrobot_position())
     def ensure_joint_pos_initialized(self):
-
         if len(self.joint_pos) < self.num_joints:
             self.joint_pos = [0.0] * self.num_joints
             self.reset_arm()
             self.update_action(self.joint_pos)
-        
-
 
     def manual_control(self, index, key):
         # 定義每個軸的最小和最大角度
@@ -64,33 +60,22 @@ class ArmController:
             min_angle = joint_limits[index]["min_angle"]
             max_angle = joint_limits[index]["max_angle"]
 
-            # 根據按鍵調整角度
-            if key == "y" and (index == 6 or index == 7):  # 減少角度
+            if key == "y" and (index == 6 or index == 7): # 控制夾爪
                 self.execute_action("catch")
-            elif key == "i" and index!=6 and index !=7:  # 增加角度
-                self.adjust_joint_angle(
-                    joint_id=index,
-                    delta_angle=10,
-                    min_angle=min_angle,
-                    max_angle=max_angle,
-                )
-            elif key == "k"and index!=6 and index !=7:  # 減少角度
-                self.adjust_joint_angle(
-                    joint_id=index,
-                    delta_angle=-10,
-                    min_angle=min_angle,
-                    max_angle=max_angle,
-                )
-            elif key == "b":  # 重置手臂
+            elif key == "i" and index not in [6, 7]: # 控制關節
+                self.adjust_joint_angle(index, 10, min_angle, max_angle)
+            elif key == "k" and index not in [6, 7]: # 控制關節
+                self.adjust_joint_angle(index, -10, min_angle, max_angle)
+            elif key == "b":
                 self.reset_arm()
-            elif key=="t":
+            elif key == "t":
                 self.real_robot_position()
-            elif key == "q":  # 結束控制
+            elif key == "q":
                 return True
             else:
-                print(f"按鍵 '{key}' 無效，請使用 'i', 'k', 'b', 或 'q'。")
+                print(f"無效按鍵 '{key}'，請使用 'i', 'k', 'b', 'q'。")
         else:
-            print(f"索引 {index} 無效，請確保其在範圍內（0-{len(joint_limits) - 1}）。")
+            print(f"無效索引 {index}，請確認範圍在 0 ~ {len(joint_limits) - 1} 之內。")
         self.update_action(self.joint_pos)
 
     # try:
@@ -130,15 +115,15 @@ class ArmController:
                 if max_error <= 1.0:
                     whether_next_pos=True
                 else:
-                    print("實體與目標 joint 前6個最大誤差超過 1 度")
+                    print("實體與目標 joint 前 6 個最大誤差超過 1 度")
             else:
                 print("無法獲取實體機械手臂位置或數量不符")
             if not self._thread_running and whether_next_pos:
                 self._stop_event.clear()  # 清除之前的停止狀態
                 self._auto_arm_thread = threading.Thread(
-                    target=self.background_task,
-                    args=(self._stop_event, mode),
-                    daemon=True,
+                    target = self.background_task,
+                    args = (self._stop_event, mode),
+                    daemon = True,
                 )
                 self._auto_arm_thread.start()
                 self._thread_running = True
@@ -743,7 +728,7 @@ class ArmController:
             {"joint_id": 6, "angle": 0.01, },
             {"joint_id": 7, "angle": -0.01, },
         ]
-        init_position=self.data_processor.get_realrobot_position()
+        init_position = self.data_processor.get_realrobot_position()
         if(init_position != None):
             init_position.extend([0.01])
             init_position.extend([-0.01])
